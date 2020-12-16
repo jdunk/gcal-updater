@@ -47,7 +47,7 @@ const gcalEventsListProcess = (resp) => {
     if (evNamePieces.length >= 2 && evNamePieces[1] === config.countedItemName) {
       currEvent = {
         ...ev,
-        count: parseInt(evNamePieces[0], 10),
+        count: parseInt(evNamePieces[0], 10) || 0,
       };
     }
   });
@@ -81,8 +81,7 @@ const getCurrEvent = (successCallback) => {
   );
 };
 
-const addToCurrTotal = (num, successCallback) => {
-
+const addToCurrTotal = (num, successCallback, errorCallback) => {
   gcal.events.update(
     {
       calendarId: config.calendarId,
@@ -90,12 +89,12 @@ const addToCurrTotal = (num, successCallback) => {
       resource: {
         ...currEvent,
         summary: `${num + currEvent.count} ${config.countedItemName}`,
-        description: `${currEvent.description}+${num}`,
+        description: !currEvent.description ? num : `${currEvent.description}+${num}`,
       },
     },
     (err, resp) => {
       if (err) {
-        console.log(`The API returned an error: ${err}`)
+        errorCallback(`The API returned an error: ${err}`);
         return;
       }
 
@@ -106,10 +105,26 @@ const addToCurrTotal = (num, successCallback) => {
 
 app.get('/add/:num', (req, res, next) => {
   getCurrEvent(() => {
-    addToCurrTotal(parseInt(req.params.num, 10), (resp) => {
-      res.send(`Total updated!<br>${resp.data.summary}<br>${resp.data.description}`);
-      console.log({ resp });
-    });
+
+    // Validate input
+    const numParamRaw = req.params.num;
+    const numParamTypecast = parseInt(req.params.num, 10);
+
+    if (!numParamTypecast || numParamTypecast < 1) {
+      res.status(400).send(`"${numParamRaw}" is not a valid number to add`);
+      return;
+    }
+
+    addToCurrTotal(
+      numParamTypecast,
+      (resp) => {
+        res.send(`Total updated!<br>${resp.data.summary}<br>${resp.data.description}`);
+        console.log({ resp });
+      },
+      (errMsg) => {
+        res.send(`Error: ${errMsg}`);
+      }
+    );
   });
 });
 
