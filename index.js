@@ -47,13 +47,13 @@ const gcalEventsListProcess = (resp) => {
     if (evNamePieces.length >= 2 && evNamePieces[1] === config.countedItemName) {
       currEvent = {
         ...ev,
-        count: evNamePieces[0],
+        count: parseInt(evNamePieces[0], 10),
       };
     }
   });
 };
 
-app.get('/', (req, res, next) => {
+const getCurrEvent = (successCallback) => {
   currEvent = null;
 
   gcal.events.list(
@@ -75,13 +75,50 @@ app.get('/', (req, res, next) => {
       if (!currEvent) {
         res.send('no event found for today');
       }
-      else {
-        res.send(`Current count: <strong>${currEvent.count}</strong> ${config.countedItemName}`);
-      }
+
+      successCallback();
     }
   );
+};
+
+const addToCurrTotal = (num, successCallback) => {
+
+  gcal.events.update(
+    {
+      calendarId: config.calendarId,
+      eventId: currEvent.id,
+      resource: {
+        ...currEvent,
+        summary: `${num + currEvent.count} ${config.countedItemName}`,
+        description: `${currEvent.description}+${num}`,
+      },
+    },
+    (err, resp) => {
+      if (err) {
+        console.log(`The API returned an error: ${err}`)
+        return;
+      }
+
+      successCallback(resp);
+    }
+  );
+};
+
+app.get('/add/:num', (req, res, next) => {
+  getCurrEvent(() => {
+    addToCurrTotal(parseInt(req.params.num, 10), (resp) => {
+      res.send(`Total updated!<br>${resp.data.summary}<br>${resp.data.description}`);
+      console.log({ resp });
+    });
+  });
+});
+
+app.get('/', (req, res, next) => {
+  getCurrEvent(() => {
+    res.send(`Current count: <strong>${currEvent.count}</strong> ${config.countedItemName}`);
+  });
 });
 
 app.listen(2001, () => {
-  console.log("Server running");
+  console.log("Server running on 2001");
 });
