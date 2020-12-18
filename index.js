@@ -26,10 +26,23 @@ const getStartOfTomorrow = (offsetInMinutes) => {
   return new Date(Date.UTC(1900 + adjNow.getYear(), adjNow.getMonth(), adjNow.getDate(), -offsetInMinutes/60, 1));
 };
 
-let currEvent;
+const toTwoDigits = num => String(num).padStart(2, '0');
+
+const getTodaysDate = (offsetInMinutes) => {
+  const adjNow = new Date((new Date()).getTime() + offsetInMinutes * 60000);
+
+  return `${1900 + adjNow.getYear()}-${toTwoDigits(1 + adjNow.getMonth())}-${toTwoDigits(adjNow.getDate())}`;
+};
+
+const getTomorrowsDate = (offsetInMinutes) => {
+  const adjNow = new Date((new Date()).getTime() + offsetInMinutes * 60000);
+
+  const nextDay = new Date(Date.UTC(1900 + adjNow.getYear(), adjNow.getMonth(), adjNow.getDate()+1));
+  return `${1900 + nextDay.getYear()}-${toTwoDigits(1 + nextDay.getMonth())}-${toTwoDigits(nextDay.getDate())}`;
+};
 
 const getCurrentEventFromGCalEventsList = (resp, thingName) => {
-  console.log(resp.data.items) // All data
+  // console.log(resp.data.items) // All data
   /*
   const events = resp.data.items.map((ev) => ({
     id: ev.id,
@@ -44,12 +57,14 @@ const getCurrentEventFromGCalEventsList = (resp, thingName) => {
   let currEv = null;
 
   resp.data.items.forEach((ev) => {
-    const evNamePieces = ev.summary.split(' ');
+    const indexOfFirstSpace = ev.summary.indexOf(' ');
 
-    if (evNamePieces.length >= 2 && evNamePieces[1] === thingName) {
+    if (indexOfFirstSpace === -1) return;
+
+    if (ev.summary.substr(1 + indexOfFirstSpace) === thingName) {
       currEv = {
         ...ev,
-        count: parseInt(evNamePieces[0], 10) || 0,
+        count: parseInt(ev.summary.substr(0, indexOfFirstSpace), 10) || 0,
       };
     }
   });
@@ -86,12 +101,12 @@ const createGCalEvent = (num, thingName) => {
         calendarId: config.calendarId,
         resource: {
           start: {
-            date: '2020-12-18',
+            date: getTodaysDate(config.timezoneOffsetInMinutes),
           },
           end: {
-            date: '2020-12-19',
+            date: getTomorrowsDate(config.timezoneOffsetInMinutes),
           },
-          colorId: '11',
+          colorId: config.defaultEventColorId,
           summary: `${num} ${thingName}`,
           description: num
         }
@@ -177,7 +192,6 @@ app.get('/add/:num/:thing', (req, res, next) => {
         summary: resp.data.summary,
         description: resp.data.description,
       });
-      console.log({ resp });
     })
     .catch(err => {
       console.error(err);
