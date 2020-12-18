@@ -12,15 +12,15 @@ const auth = new google.auth.GoogleAuth({
 
 const gcal = google.calendar({ version: 'v3', auth })
 
-const now = new Date();
-
 const getStartOfToday = (offsetInMinutes) => {
+  const now = new Date();
   const adjNow = new Date(now.getTime() + offsetInMinutes * 60000);
 
   return new Date(Date.UTC(1900 + adjNow.getYear(), adjNow.getMonth(), adjNow.getDate(), -offsetInMinutes/60));
 };
 
 const getStartOfTomorrow = (offsetInMinutes) => {
+  const now = new Date();
   const adjNow = new Date(now.getTime() + offsetInMinutes * 60000);
 
   return new Date(Date.UTC(1900 + adjNow.getYear(), adjNow.getMonth(), adjNow.getDate(), -offsetInMinutes/60, 1));
@@ -103,7 +103,15 @@ const addToCurrTotal = (num, successCallback, errorCallback) => {
   );
 };
 
-app.get('/add/:num', (req, res, next) => {
+app.get('/get/:thing', (req, res, next) => {
+  getCurrEvent(() => {
+    res.send({
+      count: currEvent.count
+    });
+  });
+});
+
+app.get('/add/:num/:thing?', (req, res, next) => {
   getCurrEvent(() => {
 
     // Validate input
@@ -118,7 +126,11 @@ app.get('/add/:num', (req, res, next) => {
     addToCurrTotal(
       numParamTypecast,
       (resp) => {
-        res.send(`Total updated!<br>${resp.data.summary}<br>${resp.data.description}`);
+        res.send({
+          count: parseInt(resp.data.summary.substr(0, resp.data.summary.indexOf(' ')), 10),
+          summary: resp.data.summary,
+          description: resp.data.description,
+        });
         console.log({ resp });
       },
       (errMsg) => {
