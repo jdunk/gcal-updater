@@ -186,11 +186,9 @@ app.get('/add/:num/:thing', (req, res, next) => {
 });
 
 app.get('/', (req, res, next) => {
-  getCurrEvent(() => {
-    res.send(`Current count: <strong>${currEvent.count}</strong> ${config.countedItemName}`);
-  });
+  res.send('Endpoints: /get/:thingName, /add/:num/:thingName');
 });
 
-app.listen(2001, () => {
-  console.log("Server running on 2001");
+app.listen(config.serverPort, () => {
+  console.log(`Server running on ${config.serverPort}`);
 });
